@@ -82,7 +82,7 @@ runs:
               else
                     pwd
                       ls -ltr
-                      shaID=$(grep -iE "^${components[${b2b_component}]}: ^${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
+                      shaID=$(grep -iE "${components[${b2b_component}]}:" shafile.txt | cut -d " " -f 3)
                       echo "CHECKSUM"
                       checksum=$(grep -iE "^$shaID$" $promotion_file)
                       if [[ "$checksum" == "" ]]
