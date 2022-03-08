@@ -46,12 +46,13 @@ runs:
                 echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID" >> shafile.txt
               fi
         done
-        echo "-----------SHA FILE--------------"
-        cat shafile.txt
-        echo "-----------SHA FILE--------------"
         pwd
         echo "-----------SHA FILE--------------"
         ls -ltr
 
+        echo "-----------SHA FILE--------------"
+        cat shafile.txt
+        echo "-----------SHA FILE--------------"
+       
       shell: bash
       
