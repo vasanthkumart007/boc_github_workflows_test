@@ -48,13 +48,13 @@ jobs:
         aws ecr describe-repositories
       shell: bash
 
-      - name: Image Verification Process
-        uses: ./boc_github_workflows_test/actions/image-deployment/actions/imagevalidation
-        with: 
-          tag: 10.12.0
-          component: webmethods-b2b
-          source_aws_registry: ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}
-          source_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}
+    - name: Image Verification Process
+      uses: ./boc_github_workflows_test/actions/image-deployment/actions/imagevalidation
+      with: 
+        tag: 10.12.0
+        component: webmethods-b2b
+        source_aws_registry: ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}
+        source_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}
 
 
   deploy-images:
