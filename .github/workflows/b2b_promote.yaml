@@ -39,11 +39,7 @@ jobs:
         with:
           path: boc_github_workflows_test/actions
       
-      - name: Apply Env File
-        id: vars
-        run: |
-          chmod 777 variable.env
-          ./variable.env
+
 
 
       - name: AWS CA3S DEV ECR CONFIGURE
@@ -110,6 +106,12 @@ jobs:
           echo "Source AWS Repo  : ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}"
           echo "Target AWS Registry  : ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}"
           echo "Target AWS Repo  : ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}"
+
+      - name: Apply Env File
+        id: vars
+        run: |
+          chmod 777 variable.env
+          ./variable.env
 
       - name: Set up Reg URLs
         id: img-regs
