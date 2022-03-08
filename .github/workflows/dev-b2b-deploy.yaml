@@ -1,7 +1,7 @@
 name: AWS CA3S DEV ENVIRONMENT DEPLOYMENT 
 on:
   schedule:
-    - cron: '33 11 * * *'
+    - cron: '37 11 * * *'
   workflow_dispatch: 
   
 jobs:
