@@ -88,6 +88,7 @@ runs:
                       if [[ "$checksum" == "" ]]
                         then
                           echo "ERR: SHA MISS MATCH FOR ${components[${b2b_component}]}: ${tags[${b2b_component}]}"
+                          exit 1
                         else
                           echo "INFO: SHA MATCHED FOR ${components[${b2b_component}]}: ${tags[${b2b_component}]}"
                       fi
