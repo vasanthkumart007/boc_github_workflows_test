@@ -49,5 +49,9 @@ runs:
         echo "-----------SHA FILE--------------"
         cat shafile.txt
         echo "-----------SHA FILE--------------"
+        pwd
+        echo "-----------SHA FILE--------------"
+        ls -ltr
+
       shell: bash
       
