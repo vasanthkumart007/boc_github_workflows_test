@@ -98,6 +98,8 @@ jobs:
       - name: Apply Env File
         id: vars
         run: |
+          pwd
+          ls -ltr
           chmod 777 variable.env
           ./variable.env
 
