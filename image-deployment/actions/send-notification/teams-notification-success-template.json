@@ -1,0 +1,8 @@
+{
+    "@context": "https://schema.org/extensions",
+    "@type": "MessageCard",
+    "themeColor": "00ff00",
+    "title": "MESSAGE_TITLE",
+    "text": "TEXT_MESSAGE",
+    "potentialAction": []
+}
