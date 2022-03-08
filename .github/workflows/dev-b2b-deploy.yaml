@@ -51,7 +51,7 @@ jobs:
     - name: Image Verification Process
       uses: ./boc_github_workflows_test/actions/image-deployment/actions/imagevalidation
       with: 
-        component: webmethods-b2b
+        component: ${{ steps.vars.outputs.DEV_REFRESH_IMAGES }}
         source_aws_registry: ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}
         source_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}
 
@@ -69,7 +69,7 @@ jobs:
       with: 
         target_env: dev
         platform: aws
-        component: webmethods-b2b
+        component: ${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
         bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
         metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
         app_version: 1012
