@@ -39,6 +39,11 @@ jobs:
         with:
           path: boc_github_workflows_test/actions
       
+      - name: Apply Env File
+        id: vars
+        run: |
+          chmod 777 variable.env
+          ./variable.env
 
 
       - name: AWS CA3S DEV ECR CONFIGURE
@@ -91,11 +96,6 @@ jobs:
           aws-region: ${{ secrets.RND_REGION }}
 
 
-      - name: Apply Env File
-        id: vars
-        run: |
-          chmod 777 variable.env
-          ./variable.env
 
 
       - name: Verification for inputs
