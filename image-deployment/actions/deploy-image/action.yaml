@@ -7,9 +7,6 @@ inputs:
   platform:
     description: Cloud provide(Possible values are aws, azure, all)
     required: true
-  tag:
-    description: Image Tag
-    required: false
   component:
     description: Name of the component
     required: false
