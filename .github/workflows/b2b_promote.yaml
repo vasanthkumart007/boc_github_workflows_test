@@ -29,10 +29,8 @@ jobs:
   Promote-Images:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          path: ./boc_github_workflows_test
+      - uses: actions/checkout@v2
+      
       
       - name: Action Repo Checkout
         uses: actions/checkout@v2
