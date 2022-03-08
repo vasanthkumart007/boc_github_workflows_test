@@ -22,10 +22,9 @@ runs:
     - name: Validate Inputs
       run: |
         valid_env=(dev spro int stage)
-        valid_components=("webmethods-b2b: 10.11.0" "webmethods-b2b: 10.12.0" "webmethods-b2b-dcc2: 10.11.0"  "webmethods-b2b-dcc2: 10.12.0"  "agileapps: 1.0.0" "agileapps: 1.0.2" "cluster-admin: 10.12.22.04" "bocctp: 10.12.22.04" "cluster-health: 10.12.22.04")
+        valid_components=("webmethods-b2b"  "webmethods-b2b-dcc2"  "agileapps"  "cluster-admin" "bocctp" "cluster-health")
         valid_platform=(aws azure all)
-        #valid_tags=(10.11.0 10.12.0)
-
+       
         if [[ ! (" ${valid_env[*]} " =~ " ${{inputs.target_env}} ") ]]
         then
           echo "ERR: Provide the proper environment listed here [ ${valid_env[*]} ]" 
@@ -37,12 +36,11 @@ runs:
           exit 1
         fi
         IFS="," read -a components <<< ${{ inputs.component }}
-        IFS="," read -a tags <<< ${{ inputs.tag }}
         for b2b_component in ${!components[@]}
         do
-          if [[ ! (" ${valid_components[*]} " =~ " ${components[$b2b_component]}: ${tags[$b2b_component]} ") ]]
+          if [[ ! (" ${valid_components[*]} " =~ " ${components[$b2b_component]} ") ]]
           then
-            echo "ERR: Invalid Components ${components[$b2b_component]}: ${tags[$b2b_component]}"
+            echo "ERR: Invalid Components ${components[$b2b_component]}"
             exit 1 
           fi 
         done
