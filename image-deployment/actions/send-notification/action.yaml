@@ -1,0 +1,84 @@
+name: 'Send Notification'
+description: 'Send Notification'
+inputs:
+  target_env:
+    description: Target Environment Name (possible values are dev, int, pstage, stage, preprod and prod)
+    default: int
+    required: true
+  source_env:
+    description: Source Environment Name (possible values are dev, int, pstage, stage, preprod and prod)
+    default: int
+    required: false
+  major_version:
+    description: Major version of the devportal image to be deployed (possible values are 10.11, 10.12)
+    default: 10.11
+    required: true
+  platform:
+    description: Platform (possible values aws, azure, all)
+    default: aws
+    required: true
+  tags:
+    description: Image Tag
+    default: v1
+    required: false
+  components:
+    description: Name of the component(Possible value is webmethods-b2b , webmethods-b2b-dcc2 , agileapps , e2e-monitoring)
+    default: webmethods-b2b
+    required: false
+  bucket_name:
+    description: S3 bucket name where stable build metadata will be updated
+    default: example
+    required: true
+  metadata_path:
+    description: S3 bucket folder path where stable build metadata will be updated
+    default: test
+    required: true
+  subject:
+    description: Email subject
+    default: This is a test subject
+    required: true
+  body:
+    description: Email body
+    default: This is a test mail from actions
+    required: true
+  job_status:
+    description: Deploy Job status
+    default: no_value
+    required: true
+  common_webhook:
+    description: Webhook
+    default: no_value
+    required: false
+  runjob:
+    description: Job Type
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Send Teams Notification
+      run: |
+        if [[ "${{ inputs.runjob }}" = "deploy" ]]
+          then
+            body=$(echo ${{ inputs.body }} | sed -e 's/\//\\\//g')
+            body+=" The components that got deployed to the ${{ inputs.target_env }} ${{ inputs.components }} with tags ${{ inputs.tags }} "
+          elif [[ "${{ inputs.runjob }}" = "promote" ]]
+            then
+              body=$(echo ${{ inputs.body }} | sed -e 's/\//\\\//g')
+              body+=" The components that got promoted to the ${{ inputs.target_env }} from ${{ inputs.source_env }} are ${{ inputs.components }} with tags ${{ inputs.tags }} "
+        fi
+
+        if [[ "${{ inputs.job_status }}" = "success" ]]
+            then
+              cp ./boc_github_workflows_test/actions/image-deployment/actions/send-notification/teams-notification-success-template.json ./teams-notification-success.json
+              subject=$(echo ${{ inputs.subject }} | sed -e 's/\//\\\//g')
+              sed -i "s/TEXT_MESSAGE/${body}\\\n\\\n\\\n/g" teams-notification-success.json
+              sed -i "s/MESSAGE_TITLE/${subject}/g" teams-notification-success.json
+              #curl -s -X POST "${{ inputs.common_webhook }}" -H "Content-Type: application/json" -d @teams-notification-success.json
+            else
+              cp ./boc_github_workflows_test/actions/image-deployment/actions/send-notification/teams-notification-failure-template.json ./teams-notification-failure.json
+              subject=$(echo ${{ inputs.subject }} | sed -e 's/\//\\\//g')
+              sed -i "s/TEXT_MESSAGE/${body}\\\n\\\n\\\n/g" teams-notification-failure.json
+              sed -i "s/MESSAGE_TITLE/${subject}/g" teams-notification-failure.json
+              #curl -s -X POST "${{ inputs.common_webhook }}" -H "Content-Type: application/json" -d @teams-notification-failure.json
+        fi
+      shell: bash
