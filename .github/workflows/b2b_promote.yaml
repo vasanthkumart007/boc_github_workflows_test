@@ -15,8 +15,8 @@ on:
         required: true
         default: int
       components:
-        description: "Components to promote (webmethods-b2b,webmethods-b2b-dcc2,e2e-monitoring,agileapps)"
-        default: webmethods-b2b
+        description: "Components to promote (webmethods-b2b,webmethods-b2b-dcc2,agileapps,bocctp,cluster-health,cluster-admin)"
+        default: webmethods-b2b,webmethods-b2b-dcc2,bocctp,agileapps
         required: true
       tags:
         description: "Tags of corresponding components (applicable for dev and spro source envs)"
@@ -29,8 +29,10 @@ jobs:
   Promote-Images:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: ./boc_github_workflows_test
       
       - name: Action Repo Checkout
         uses: actions/checkout@v2
@@ -96,8 +98,6 @@ jobs:
       - name: Apply Env File
         id: vars
         run: |
-          pwd
-          ls -ltr
           chmod 777 variable.env
           ./variable.env
 
