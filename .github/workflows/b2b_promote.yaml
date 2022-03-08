@@ -15,8 +15,8 @@ on:
         required: true
         default: int
       components:
-        description: "Components to promote (webmethods-b2b,webmethods-b2b-dcc2,agileapps,bocctp,cluster-health,cluster-admin)"
-        default: webmethods-b2b,webmethods-b2b-dcc2,bocctp,agileapps
+        description: "Components to promote (webmethods-b2b,webmethods-b2b-dcc2,e2e-monitoring,agileapps)"
+        default: webmethods-b2b
         required: true
       tags:
         description: "Tags of corresponding components (applicable for dev and spro source envs)"
@@ -29,10 +29,8 @@ jobs:
   Promote-Images:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          path: ./boc_github_workflows_test
+      - uses: actions/checkout@v2
+      
       
       - name: Action Repo Checkout
         uses: actions/checkout@v2
@@ -98,9 +96,10 @@ jobs:
       - name: Apply Env File
         id: vars
         run: |
+          pwd
+          ls -ltr
           chmod 777 variable.env
           ./variable.env
-
       - name: Set up Reg URLs
         id: img-regs
         run: |
@@ -117,7 +116,6 @@ jobs:
               echo "::set-output name=AWS_TARGET_REG_URL::${{ steps.aws-stage-ecr-login.outputs.registry }}"
               echo "::set-output name=AWS_TARGET_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
           fi
-
       - name: Verification for inputs
         run: |
           echo "Platform : ${{ github.event.inputs.platform }}"
@@ -130,8 +128,6 @@ jobs:
           echo "Source AWS Repo  : ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}"
           echo "Target AWS Registry  : ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}"
           echo "Target AWS Repo  : ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}"
-
-
       - name: Promote Images to Env
         uses: ./boc_github_workflows_test/actions/image-deployment/actions/promote-image
         with:
@@ -163,4 +159,3 @@ jobs:
           job_status: ${{ job.status}}
           runjob: promote
           common_webhook: ${{ steps.vars.outputs.COMMON_WEBHOOK }}
-          
