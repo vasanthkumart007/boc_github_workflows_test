@@ -73,7 +73,7 @@ runs:
 
        for b2b_component in ${!components[@]}
             do
-              lookforcomponent=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}/p" $deployment_file || true`
+              lookforcomponent=`sed -n "/^${components[${b2b_component}]}:/p" $deployment_file || true`
               if [[ "$lookforcomponent" = "" ]]
               then
                       pwd
