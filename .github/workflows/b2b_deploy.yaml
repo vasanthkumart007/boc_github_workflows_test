@@ -9,11 +9,11 @@ on:
       component:
         description: Mention the images ( Example webmethods-b2b , webmethods-b2b-dcc2 , e2e-monitoring , agileapps , cluster-admin , cluster-health )
         required: true
-        default: webmethods-b2b
+        default: webmethods-b2b,webmethods-b2b-dcc2,boc-ctp,agileapps,cluster-admin,cluster-health
       tag:
-        description: Mention the tag of the image ( Example 10.11.0 , 10.12.0 , 1.0.0 , 2.0.0)
+        description: Mention the tag of the image ( Available tags 10.11.0 , 10.12.0 , 1.0.0 , 2.0.0)
         required: true
-        default: 10.12.0
+        default: 10.12.0,10.12.0,10.12.22.04,1.0.2,10.12.22.04,10.12.22.04
       platform:
         description: Specify the Cloud Platform ( Example aws , azure , all )
         required: true
