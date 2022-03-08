@@ -27,7 +27,7 @@ on:
         required: true
 jobs:
   Promote-Images:
-    runs-on: [ myboc ]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
