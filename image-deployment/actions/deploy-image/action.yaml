@@ -83,15 +83,13 @@ runs:
                     pwd
                       ls -ltr
                       shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
-                      checksum=$(grep -iE "^$shaID$" promotion_file)
+                      checksum=$(grep -iE "^$shaID$" $promotion_file)
                       if [[ "$checksum" == "" ]]
                         then
                           echo "ERR: SHA MISS MATCH FOR ${components[${b2b_component}]}: ${tags[${b2b_component}]}"
                         else
                           echo "INFO: SHA MATCHED FOR ${components[${b2b_component}]}: ${tags[${b2b_component}]}"
                       fi
-                      echo "INFO: SHAID : $shaID"
- 
               fi
             done
         fi
