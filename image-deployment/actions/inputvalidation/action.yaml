@@ -1,0 +1,50 @@
+name: "Input Validation"
+description: "Input Validation for the parameters passed"
+inputs:
+  target_env:
+    description: Target environment
+    required: true
+  platform:
+    description: Target Platform
+    required: true
+  component:
+    description: Deployed Component
+    required: true
+  tag:
+    description: Deployed tag
+    required: true
+  app_version:
+    description: App version
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Validate Inputs
+      run: |
+        valid_env=(dev spro int stage)
+        valid_components=("webmethods-b2b: 10.11.0" "webmethods-b2b-dcc2: 10.11.0" "webmethods-b2b: 10.12.0" "webmethods-b2b-dcc2: 10.12.0" "e2e-monitoring: 2.0.0" "agileapps: 1.0.0")
+        valid_platform=(aws azure all)
+        #valid_tags=(10.11.0 10.12.0)
+
+        if [[ ! (" ${valid_env[*]} " =~ " ${{inputs.target_env}} ") ]]
+        then
+          echo "Provide the proper environment listed here [ ${valid_env[*]} ]" 
+          exit 1
+        fi
+        if [[ ! (" ${valid_platform[*]} " =~ " ${{inputs.platform}} ") ]]
+        then
+          echo "Provide the proper platforms listed here [ ${valid_platform[*]} ]" 
+          exit 1
+        fi
+        IFS="," read -a components <<< ${{ inputs.component }}
+        IFS="," read -a tags <<< ${{ inputs.tag }}
+        for b2b_component in ${!components[@]}
+        do
+          if [[ ! (" ${valid_components[*]} " =~ " ${components[$b2b_component]}: ${tags[$b2b_component]} ") ]]
+          then
+            echo "Invalid Components ${components[$b2b_component]}: ${tags[$b2b_component]}"
+            exit 1 
+          fi 
+        done
+      shell: bash
+      
