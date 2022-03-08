@@ -1,31 +1,10 @@
 name: AWS CA3S DEV ENVIRONMENT DEPLOYMENT 
 on:
-  workflow_dispatch:
-    inputs:
-      target_env:
-        description: Specify the environment ( Example Dev , Int , Stage , Spro )
-        default: dev
-        required: true
-      component:
-        description: Mention the images ( Example webmethods-b2b , webmethods-b2b-dcc2 , e2e-monitoring , agileapps , cluster-admin , cluster-health )
-        required: true
-        default: webmethods-b2b,webmethods-b2b-dcc2,bocctp,agileapps,cluster-admin,cluster-health
-      tag:
-        description: Mention the tag of the image ( Available tags 10.11.0 , 10.12.0 , 1.0.0 , 2.0.0)
-        required: true
-        default: 10.12.0,10.12.0,10.12.22.04,1.0.2,10.12.22.04,10.12.22.04
-      platform:
-        description: Specify the Cloud Platform ( Example aws , azure , all )
-        required: true
-        default: aws
-      user:
-        default: Vasanth
-      app_version:
-        description: Specify the current app version ( Example 1012 )
-        required: true
+  schedule:
+    - cron: '1/5 * * * *'
 jobs:
-  deploy-images:
-    name: Deploying to the Environment
+  configure-env:
+    name: Configuring to CA3S Dev Environment
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -34,64 +13,18 @@ jobs:
       uses: actions/checkout@v2
       with:
         path: boc_github_workflows_test/actions
-
-
-
-    
+   
     - name: AWS CA3S DEV ECR CONFIGURE
       uses: aws-actions/configure-aws-credentials@v1
-      if: github.event.inputs.target_env == 'dev'
       with:
           aws-access-key-id: ${{ secrets.RND_AWS_DEV_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.RND_AWS_DEV_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.RND_REGION }}
     
-    
     - name: AWS CA3S DEV ECR LOGIN
       id: aws-dev-ecr-login
       uses: aws-actions/amazon-ecr-login@v1
-      if: github.event.inputs.target_env == 'dev'
-          
  
- 
-    - name: AWS CA3S INT ECR CONFIGURE
-      uses: aws-actions/configure-aws-credentials@v1
-      if: github.event.inputs.target_env == 'int'
-      with:
-          aws-access-key-id: ${{ secrets.RND_AWS_INT_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.RND_AWS_INT_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-          
-    
-    - name: AWS CA3S INT ECR LOGIN
-      id: aws-int-ecr-login
-      uses: aws-actions/amazon-ecr-login@v1
-      if: github.event.inputs.target_env == 'int'
-    
-    
-    - name: AWS CA3S STAGE ECR CONFIGURE
-      uses: aws-actions/configure-aws-credentials@v1
-      if: github.event.inputs.target_env == 'stage'
-      with:
-          aws-access-key-id: ${{ secrets.RND_AWS_STAGE_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.RND_AWS_STAGE_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.RND_REGION }}
-
-   
-    - name: AWS CA3S STAGE ECR LOGIN
-      id: aws-stage-ecr-login
-      uses: aws-actions/amazon-ecr-login@v1
-      if: github.event.inputs.target_env == 'stage'
-
-
-    - name: Validate Inputs
-      uses: ./boc_github_workflows_test/actions/image-deployment/actions/inputvalidation
-      with:
-        target_env: ${{ github.event.inputs.target_env }}
-        component: ${{ github.event.inputs.component }}
-        tag: ${{ github.event.inputs.tag }}
-        platform: ${{ github.event.inputs.platform }}
-        app_version: ${{ github.event.inputs.currentversion }}
     
     - name: Apply Env File
       id: vars
@@ -105,64 +38,10 @@ jobs:
     - name: Set up Reg URLs
       id: img-regs
       run: |
-          if [[ "${{ github.event.inputs.target_env  }}" = "dev" ]]
-            then
               echo "::set-output name=AWS_SOURCE_REG_URL::${{ steps.aws-dev-ecr-login.outputs.registry }}"
               echo "::set-output name=AWS_SOURCE_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
-          elif [[ "${{ github.event.inputs.target_env  }}" = "int" ]]
-            then
-              echo "::set-output name=AWS_SOURCE_REG_URL::${{ steps.aws-int-ecr-login.outputs.registry }}"
-              echo "::set-output name=AWS_SOURCE_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
-          fi
-    
+          
     - name: Details
       run: |
         aws ecr describe-repositories
       shell: bash
- 
-    - name: Image Verification Process
-      uses: ./boc_github_workflows_test/actions/image-deployment/actions/imagevalidation
-      with: 
-        tag: ${{ github.event.inputs.tag }}
-        component: ${{ github.event.inputs.component }}
-        source_aws_registry: ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}
-        source_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}
-  
-    - name: AWS credentials For common S3 Bucket
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.RND_AWS_S3_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.RND_AWS_S3_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.RND_REGION }}
-      if: github.event.inputs.platform == 'aws' 
-      
-
-  
-    - name: Deployement Process
-      uses: ./boc_github_workflows_test/actions/image-deployment/actions/deploy-image
-      with: 
-        target_env: ${{ github.event.inputs.target_env }}
-        platform: ${{ github.event.inputs.platform }}
-        tag: ${{ github.event.inputs.tag }}
-        component: ${{ github.event.inputs.component }}
-        bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
-        metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
-        app_version: ${{ github.event.inputs.app_version }}
-        scripts: ./boc_github_workflows_test/actions/image-deployment/actions/deploy-image/dep.sh
-    
-    
-    - name: Notification Alert
-      if: always()
-      uses: ./boc_github_workflows_test/actions/image-deployment/actions/send-notification
-      with:
-        target_env: ${{ github.event.inputs.target_env }}
-        subject: ${{ github.workflow }} for ${{ github.event.inputs.target_env }} env of ${{ github.repository }} is ${{ job.status }}
-        body: ${{ github.job }} job in ${{ github.workflow }} for ${{ github.event.inputs.target_env }} env of ${{ github.repository }} is ${{ job.status }}.
-        platform: ${{ github.event.inputs.platform }}
-        bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
-        metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
-        tags: ${{ github.event.inputs.tag }}
-        components: ${{ github.event.inputs.component }}
-        job_status: ${{ job.status}}
-        common_webhook: ${{ steps.vars.outputs.COMMON_WEBHOOK }}
-        runjob: deploy
