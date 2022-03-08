@@ -84,7 +84,7 @@ runs:
                       ls -ltr
                       shaID=$(grep -iE "${components[${b2b_component}]}:" shafile.txt | cut -d " " -f 3)
                       echo "CHECKSUM"
-                      checksum=$(grep -iE "^$shaID$" $promotion_file)
+                      checksum=$(grep -iE "$shaID" $promotion_file)
                       if [[ "$checksum" == "" ]]
                         then
                           echo "ERR: SHA MISS MATCH FOR ${components[${b2b_component}]}: ${tags[${b2b_component}]}"
