@@ -1,4 +1,4 @@
-name: AWS CA3S DEV ENVIRONMENT DEPLOYMENT 
+name: AWS CA3S INT ENVIRONMENT DEPLOYMENT 
 on:
   schedule:
     - cron: '* * * * *'
@@ -6,7 +6,7 @@ on:
   
 jobs:
   configure-env:
-    name: Configuring to CA3S Dev Environment
+    name: Configuring to CA3S Int Environment
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -16,15 +16,15 @@ jobs:
       with:
         path: boc_github_workflows_test/actions
    
-    - name: AWS CA3S DEV ECR CONFIGURE
+    - name: AWS CA3S INT ECR CONFIGURE
       uses: aws-actions/configure-aws-credentials@v1
       with:
-          aws-access-key-id: ${{ secrets.RND_AWS_DEV_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.RND_AWS_DEV_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.RND_REGION }}
+          aws-access-key-id: ${{ secrets.RND_AWS_INT_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.RND_AWS_INT_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
     
     - name: AWS CA3S DEV ECR LOGIN
-      id: aws-dev-ecr-login
+      id: aws-int-ecr-login
       uses: aws-actions/amazon-ecr-login@v1
  
     
@@ -40,7 +40,7 @@ jobs:
     - name: Set up Reg URLs
       id: img-regs
       run: |
-              echo "::set-output name=AWS_SOURCE_REG_URL::${{ steps.aws-dev-ecr-login.outputs.registry }}"
+              echo "::set-output name=AWS_SOURCE_REG_URL::${{ steps.aws-int-ecr-login.outputs.registry }}"
               echo "::set-output name=AWS_SOURCE_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
           
     - name: Details
@@ -51,7 +51,7 @@ jobs:
     - name: Image Verification Process
       uses: ./boc_github_workflows_test/actions/image-deployment/actions/imagevalidation
       with: 
-        component: ${{ steps.vars.outputs.DEV_REFRESH_IMAGES }}
+        component: ${{ steps.vars.outputs.INT_REFRESH_IMAGES }}
         source_aws_registry: ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}
         source_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}
 
@@ -67,9 +67,9 @@ jobs:
     - name: Deployement Process
       uses: ./boc_github_workflows_test/actions/image-deployment/actions/deploy-image
       with: 
-        target_env: dev
+        target_env: int
         platform: aws
-        component: ${{ steps.vars.outputs.DEV_REFRESH_IMAGES }}
+        component: ${{ steps.vars.outputs.INT_REFRESH_IMAGES }}
         bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
         metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
         app_version: 1012
