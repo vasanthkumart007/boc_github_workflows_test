@@ -9,7 +9,7 @@ on:
       component:
         description: Mention the images ( Example webmethods-b2b , webmethods-b2b-dcc2 , e2e-monitoring , agileapps , cluster-admin , cluster-health )
         required: true
-        default: webmethods-b2b,webmethods-b2b-dcc2,boc-ctp,agileapps,cluster-admin,cluster-health
+        default: webmethods-b2b,webmethods-b2b-dcc2,bocctp,agileapps,cluster-admin,cluster-health
       tag:
         description: Mention the tag of the image ( Available tags 10.11.0 , 10.12.0 , 1.0.0 , 2.0.0)
         required: true
