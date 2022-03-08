@@ -36,16 +36,8 @@ runs:
       echo "INFO: Target Environment - ${{ inputs.target_env }}"
       echo "INFO: Cloud Platform - ${{ inputs.platform }}"
       echo "INFO: Components - ${{ inputs.component }}"
-      echo "INFO: Tags - ${{ inputs.tag }}"
       echo " "
       echo " "
-    shell: bash
-  - name: Target env
-    run: |
-      echo "INFO: -------------TARGET ENVIRONMENT-------------"
-      echo "INFO: Target Environment - ${{ inputs.target_env }}"
-      echo " "
-      echo " "      
     shell: bash
   - name: Deploy Stable Image
     run: |
@@ -62,7 +54,7 @@ runs:
       echo " "
       echo " "
       echo "INFO: >>TAGS<<"
-      tags=($(echo ${{ inputs.tag }} | sed -e 's\,\ \g'))
+      tags=($(cat taglist.txt | sed -e 's\,\ \g'))
       echo "${tags[@]}"
       echo " "
       echo " "
