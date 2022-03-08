@@ -1,7 +1,7 @@
 name: AWS CA3S DEV ENVIRONMENT DEPLOYMENT 
 on:
   schedule:
-    - cron: '1/5 * * * *'
+    - cron: '* * * * *'
 jobs:
   configure-env:
     name: Configuring to CA3S Dev Environment
