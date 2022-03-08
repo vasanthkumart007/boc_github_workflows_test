@@ -94,18 +94,6 @@ jobs:
 
 
 
-      - name: Verification for inputs
-        run: |
-          echo "Platform : ${{ github.event.inputs.platform }}"
-          echo "Source Env : ${{ github.event.source_env }}"
-          echo "Target Env : ${{ github.event.inputs.target_env }}"
-          echo "Components : ${{ github.event.inputs.components }}"
-          echo "Tags : ${{ github.event.inputs.tags }}"
-          echo "App Version : ${{ github.event.inputs.app_version }}"
-          echo "Source AWS Registry  : ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}"
-          echo "Source AWS Repo  : ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}"
-          echo "Target AWS Registry  : ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}"
-          echo "Target AWS Repo  : ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}"
 
       - name: Apply Env File
         id: vars
@@ -129,6 +117,20 @@ jobs:
               echo "::set-output name=AWS_TARGET_REG_URL::${{ steps.aws-stage-ecr-login.outputs.registry }}"
               echo "::set-output name=AWS_TARGET_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
           fi
+
+      - name: Verification for inputs
+        run: |
+          echo "Platform : ${{ github.event.inputs.platform }}"
+          echo "Source Env : ${{ github.event.source_env }}"
+          echo "Target Env : ${{ github.event.inputs.target_env }}"
+          echo "Components : ${{ github.event.inputs.components }}"
+          echo "Tags : ${{ github.event.inputs.tags }}"
+          echo "App Version : ${{ github.event.inputs.app_version }}"
+          echo "Source AWS Registry  : ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}"
+          echo "Source AWS Repo  : ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}"
+          echo "Target AWS Registry  : ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}"
+          echo "Target AWS Repo  : ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}"
+
 
       - name: Promote Images to Env
         uses: ./boc_github_workflows_test/actions/image-deployment/actions/promote-image
