@@ -1,9 +1,6 @@
 name: "Image Validation"
 description: "Image Validation for the parameters passed"
 inputs:
-  tag:
-    description: Image Tag
-    required: false
   component:
     description: Name of the component
     required: false
@@ -21,29 +18,21 @@ runs:
       run: |
         components=($(echo ${{ inputs.component }} | sed -e 's\,\ \g'))
         echo "$components"
-        tags=($(echo ${{ inputs.tag }} | sed -e 's\,\ \g'))
-        echo "$tags"
         touch ./shafile.txt
         for b2b_component in ${!components[@]}
             do
               echo "AWS REPO: ${{ inputs.source_aws_repo_prefix }}"
               repo_present=$(aws ecr describe-repositories | jq -r .repositories[].repositoryName | grep -E "${{ inputs.source_aws_repo_prefix }}/${components[${b2b_component}]}$" || true)
               echo "REPO: $repo_present"
-              tag_present=$(aws ecr describe-images --repository-name=$repo_present --query 'sort_by(imageDetails,& imagePushedAt)[*].imageTags[0]'  | grep "${tags[${b2b_component}]}" || true)
-              echo "TAG: $tag_present"
-              echo " $repo_present $tag_present "
               if [[ "$repo_present" = "" ]]
                 then
-                  echo "ERR: Image is not present in AWS ECR. Please promote to ECR"
-                  exit 1
-              elif [[ "$tag_present" = "" ]]
-                then
-                  echo "ERR: Tag is not present in AWS ECR. Please check whether the tag you provided is proper"
+                  echo "ERR: Repository is not present in AWS ECR."
                   exit 1
               else
+                latest_tag=$(aws ecr describe-images --repository-name=${{ inputs.source_aws_repo_prefix }}/${components[${b2b_component}]} --query 'sort_by(imageDetails,& imagePushedAt)[*].imageTags[0]' --output yaml | tail -n 1 | awk -F'- ' '{print $2}')
                 shaID=$(aws ecr describe-images --repository-name=${{ inputs.source_aws_repo_prefix }}/${components[${b2b_component}]} --image-ids imageTag=${tags[${b2b_component}]}  | jq '.imageDetails[0].imageDigest' -r)
                 echo "Info: Image present in AWS ECR."
-                echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID" >> shafile.txt
+                echo "${components[${b2b_component}]}: $latest_tag: $shaID" >> shafile.txt
               fi
         done
         pwd
