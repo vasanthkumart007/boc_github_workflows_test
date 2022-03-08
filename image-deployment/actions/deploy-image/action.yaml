@@ -32,36 +32,36 @@ runs:
   steps:
   - name: Details of the Job
     run: |
-      echo "-------------DETAILS OF THE JOB-------------"
-      echo "Target Environment - ${{ inputs.target_env }}"
-      echo "Cloud Platform - ${{ inputs.platform }}"
-      echo "Components - ${{ inputs.component }}"
-      echo "Tags - ${{ inputs.tag }}"
+      echo "INFO: -------------DETAILS OF THE JOB-------------"
+      echo "INFO: Target Environment - ${{ inputs.target_env }}"
+      echo "INFO: Cloud Platform - ${{ inputs.platform }}"
+      echo "INFO: Components - ${{ inputs.component }}"
+      echo "INFO: Tags - ${{ inputs.tag }}"
       echo " "
       echo " "
     shell: bash
   - name: Target env
     run: |
-      echo "-------------TARGET ENVIRONMENT-------------"
-      echo "Target Environment - ${{ inputs.target_env }}"
+      echo "INFO: -------------TARGET ENVIRONMENT-------------"
+      echo "INFO: Target Environment - ${{ inputs.target_env }}"
       echo " "
       echo " "      
     shell: bash
   - name: Deploy Stable Image
     run: |
-      echo "-------------DEPLOY STABLE IMAGE-------------"
+      echo "INFO: -------------DEPLOY STABLE IMAGE-------------"
       if [[ "${{ inputs.platform }}" = "all" ]]
         then
           platforms=(aws azure)
         else
           platforms=(${{ inputs.platform }})
       fi
-      echo ">>COMPONENTS<<"
+      echo "INFO: >>COMPONENTS<<"
       components=($(echo ${{ inputs.component }} | sed -e 's\,\ \g'))
       echo "${components[@]}"
       echo " "
       echo " "
-      echo ">>TAGS<<"
+      echo "INFO: >>TAGS<<"
       tags=($(echo ${{ inputs.tag }} | sed -e 's\,\ \g'))
       echo "${tags[@]}"
       echo " "
@@ -88,7 +88,7 @@ runs:
               if [[ "$lookforcomponent" = "" ]]
               then
                       shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
-                      echo "SHAID : $shaID"
+                      echo "INFO: SHAID : $shaID"
                       echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID " >> $deployment_file
               else
                       shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
