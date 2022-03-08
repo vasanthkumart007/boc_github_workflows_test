@@ -91,6 +91,7 @@ runs:
                       echo "SHAID : $shaID"
                       echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID " >> $deployment_file
               else
+                      shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
                       sed -i "s/${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID /g" $deployment_file
               fi
             done
@@ -113,8 +114,6 @@ runs:
           aws s3 cp $deployment_file s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt 
           #history file
           aws s3 cp $deployment_file s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/${datelabel}-${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt 
-          rm -rf shafile.txt
-          rm -rf deployment_file
     shell: bash
   - name: Delete old Builds
     run: |
