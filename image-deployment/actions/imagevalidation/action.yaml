@@ -33,6 +33,7 @@ runs:
                 shaID=$(aws ecr describe-images --repository-name=${{ inputs.source_aws_repo_prefix }}/${components[${b2b_component}]} --image-ids imageTag=$latest_tag  | jq '.imageDetails[0].imageDigest' -r)
                 echo "Info: Image present in AWS ECR."
                 echo "${components[${b2b_component}]}: $latest_tag: $shaID" >> shafile.txt
+                echo "$latest_tag" >> taglist.txt
               fi
         done
         pwd
