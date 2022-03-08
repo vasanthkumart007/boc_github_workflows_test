@@ -242,6 +242,7 @@ runs:
           
               for b2b_component in ${!components[@]}
               do
+                promotion_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt"
                 echo " "
                 echo "-------------------PUSH IMAGES-------------------"
                 pull_image="${source_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}_stable"
@@ -258,19 +259,7 @@ runs:
                 docker rmi $push_image
                 echo "-----------------DOCKER DONE-------------"
                 echo " "
-              done
-          done
-          #----------------------------------------------PUSH IMAGES----------------------------------------------------
-          
-          
-        #fi
-        echo " SHAID: $shaId "
-        promotion_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt"
-
-         for b2b_component in ${!components[@]}
-             do
-                 echo " $shaId "
-                 tag_present=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/p" $promotion_file || true`
+                tag_present=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/p" $promotion_file || true`
                  if [[ "$tag_present" = "" ]]
                  then
                    echo "INFO: Tag for ${components[${b2b_component}]} not present in target file. Add it"
@@ -279,7 +268,28 @@ runs:
                    echo "INFO: Tag for ${components[${b2b_component}]} present in target file. Changing it"
                    sed -i "s/${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaId/g" $promotion_file
                  fi
-             done
+              done
+          done
+          #----------------------------------------------PUSH IMAGES----------------------------------------------------
+          
+          
+        #fi
+        # echo " SHAID: $shaId "
+        # promotion_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt"
+
+        #  for b2b_component in ${!components[@]}
+        #      do
+        #          echo " $shaId "
+        #          tag_present=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/p" $promotion_file || true`
+        #          if [[ "$tag_present" = "" ]]
+        #          then
+        #            echo "INFO: Tag for ${components[${b2b_component}]} not present in target file. Add it"
+        #            echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaId" >> $promotion_file
+        #          else
+        #            echo "INFO: Tag for ${components[${b2b_component}]} present in target file. Changing it"
+        #            sed -i "s/${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaId/g" $promotion_file
+        #          fi
+        #      done
 
         for b2b_platform in ${!platforms[@]}
         do
