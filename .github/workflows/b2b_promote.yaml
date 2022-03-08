@@ -16,7 +16,7 @@ on:
         default: int
       components:
         description: "Components to promote (webmethods-b2b,webmethods-b2b-dcc2,e2e-monitoring,agileapps)"
-        default: webmethods-b2b
+        default: webmethods-b2b,webmethods-b2b-dcc2,bocctp,agileapps
         required: true
       tags:
         description: "Tags of corresponding components (applicable for dev and spro source envs)"
