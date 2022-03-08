@@ -1,0 +1,146 @@
+name: 'Deploy Image'
+description: 'Deploy Image Process'
+inputs:
+  target_env:
+    description: Environment Name (Possible values are dev, int, stage and spro)
+    required: true
+  platform:
+    description: Cloud provide(Possible values are aws, azure, all)
+    required: true
+  tag:
+    description: Image Tag
+    required: false
+  component:
+    description: Name of the component
+    required: false
+  bucket_name:
+    description: S3 bucket name where stable build metadata will be retrieved
+    required: true
+  metadata_path:
+    description: S3 bucket folder path where stable build metadata will be retrieved
+    required: true
+  app_version:
+    description: Specify the current app version ( Example 1012 )
+    default: "1012"
+    required: true
+  scripts:
+    description: Specify the deployment script
+    default: deploy.sh
+    required: true
+runs:
+  using: 'composite'
+  steps:
+  - name: Details of the Job
+    run: |
+      echo "-------------DETAILS OF THE JOB-------------"
+      echo "Target Environment - ${{ inputs.target_env }}"
+      echo "Cloud Platform - ${{ inputs.platform }}"
+      echo "Components - ${{ inputs.component }}"
+      echo "Tags - ${{ inputs.tag }}"
+      echo " "
+      echo " "
+    shell: bash
+  - name: Target env
+    run: |
+      echo "-------------TARGET ENVIRONMENT-------------"
+      echo "Target Environment - ${{ inputs.target_env }}"
+      echo " "
+      echo " "      
+    shell: bash
+  - name: Deploy Stable Image
+    run: |
+      echo "-------------DEPLOY STABLE IMAGE-------------"
+      if [[ "${{ inputs.platform }}" = "all" ]]
+        then
+          platforms=(aws azure)
+        else
+          platforms=(${{ inputs.platform }})
+      fi
+      echo ">>COMPONENTS<<"
+      components=($(echo ${{ inputs.component }} | sed -e 's\,\ \g'))
+      echo "${components[@]}"
+      echo " "
+      echo " "
+      echo ">>TAGS<<"
+      tags=($(echo ${{ inputs.tag }} | sed -e 's\,\ \g'))
+      echo "${tags[@]}"
+      echo " "
+      echo " "
+      
+        for b2b_platform in ${!platforms[@]} 
+          do
+            deployment_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt"
+            lookforfile=$(aws s3 ls s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/$deployment_file || true)
+           
+            if [[ "$lookforfile" == "" ]]
+            then
+              # touch file in local if the file is not there in AWS S3
+              touch "./${deployment_file}"
+            else
+              # copies contents of the file to S3 existing file
+              aws s3 cp s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/$deployment_file $deployment_file
+            fi
+        
+
+       for b2b_component in ${!components[@]}
+            do
+              lookforcomponent=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}/p" $deployment_file || true`
+              if [[ "$lookforcomponent" = "" ]]
+              then
+                      shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
+                      echo "SHAID : $shaID"
+                      echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID " >> $deployment_file
+              else
+                      sed -i "s/${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID /g" $deployment_file
+              fi
+            done
+          done
+        
+        
+        #------------------------------------------------------------------------------Start deploying to environment------------------------------------------------------------------------------
+        datelabel=$(TZ=IST-5:30 date | sed 's/ /-/g')
+        for b2b_platform in ${!platforms[@]}
+        do
+          
+          echo "Deploying Images to  ${platforms[$b2b_platform]} for ${{ inputs.target_env }} environment"
+          
+          # Deploying scripts
+          chmod 777 ${{ inputs.scripts }}  
+          ${{ inputs.scripts }} ${platforms[$b2b_platform]} ${{ inputs.target_env }} 
+           
+         done
+          #main file 
+          aws s3 cp $deployment_file s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt 
+          #history file
+          aws s3 cp $deployment_file s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/${datelabel}-${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt 
+          rm -rf shafile.txt
+          rm -rf deployment_file
+    shell: bash
+  - name: Delete old Builds
+    run: |
+        if [[ "${{ inputs.platform }}" = "all" ]]
+        then
+          platforms=(aws azure)
+        else
+          platforms=(${{ inputs.platform }})
+        fi
+        echo "${platforms[*]}"
+        for b2b_platform in ${!platforms[@]}
+        do
+          echo "Build History of ${platforms[$b2b_platform]}-${{ inputs.target_env }}"
+          aws s3 ls s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/ | awk '{print $4}' | grep ".*-${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt"
+          fcount=$(aws s3 ls s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/ | awk '{print $4}' | grep ".*-${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt" | wc -l)
+          echo "$fcount"
+          if [[ $fcount -le 3 ]]
+          then
+                  echo "Deletion cancelled."
+          else
+                  aws s3 ls s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/ | awk '{print $4}' | grep ".*-${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt" | sort -nr | tail +4 | while read filename
+          do
+                  echo "Deleting file $filename"
+                  aws s3 rm s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/$filename
+                  echo "$filename deleted sucessfully"
+          done
+          fi
+        done
+    shell: bash
