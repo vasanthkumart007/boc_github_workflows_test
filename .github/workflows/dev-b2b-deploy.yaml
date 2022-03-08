@@ -69,7 +69,7 @@ jobs:
       with: 
         target_env: dev
         platform: aws
-        component: ${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
+        component: ${{ steps.vars.outputs.DEV_REFRESH_IMAGES }}
         bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
         metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
         app_version: 1012
