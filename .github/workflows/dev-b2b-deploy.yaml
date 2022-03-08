@@ -1,5 +1,6 @@
 name: B2B CA3S DEV ENVIRONMENT DEPLOYMENT 
 on:
+  workflow-dispatch:
   schedule: 
     - cron: '1/5 * * * *'
 jobs:
