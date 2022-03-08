@@ -56,6 +56,45 @@ runs:
       echo " "
       echo " "
       
+
+      if [[ ("${{ inputs.target_env }}" = "int") || ("${{ inputs.target_env }}" = "stage") || ("${{ inputs.target_env }}" = "preprod") ]]
+      then
+        promotion_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt"
+        lookforfile=$(aws s3 ls s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/$promotion_file || true)
+        if [[ "$lookforfile" == "" ]]
+            then
+              # touch file in local if the file is not there in AWS S3
+              echo "ERR: Promotion file is not present. Please check whether we have promoted images in Target environment."
+              exit 1
+            else
+              # copies contents of the file to S3 existing file
+              aws s3 cp s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/$promotion_file $promotion_file
+        fi
+        for b2b_component in ${!components[@]}
+            do
+              lookforcomponent=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}/p" $promotion_file || true`
+              if [[ "$lookforcomponent" = "" ]]
+              then
+
+                      echo "ERR: Image not promoted to ECR"
+                      exit 1
+                      
+              else
+                    pwd
+                      ls -ltr
+                      shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
+                      checksum=$(grep -iE "^$shaID$" promotion_file)
+                      if [[ "$checksum" == "" ]]
+                        then
+                          echo "ERR: SHA MISS MATCH FOR ${components[${b2b_component}]}: ${tags[${b2b_component}]}"
+                        else
+                          echo "INFO: SHA MATCHED FOR ${components[${b2b_component}]}: ${tags[${b2b_component}]}"
+                      fi
+              
+              fi
+            done
+        fi
+
         for b2b_platform in ${!platforms[@]} 
           do
             deployment_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt"
@@ -69,27 +108,26 @@ runs:
               # copies contents of the file to S3 existing file
               aws s3 cp s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/$deployment_file $deployment_file
             fi
-        
+        done
 
-       for b2b_component in ${!components[@]}
-            do
-              lookforcomponent=`sed -n "/^${components[${b2b_component}]}:/p" $deployment_file || true`
-              if [[ "$lookforcomponent" = "" ]]
-              then
-                      pwd
-                      ls -ltr
-                      shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
-                      echo "INFO: SHAID : $shaID"
-                      echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID " >> $deployment_file
-              else
-                      pwd
-                      ls -ltr
-                      
-                      shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
-                      sed -i "s/${components[${b2b_component}]}: .*/${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID /g" $deployment_file
-              fi
-            done
-          done
+          for b2b_component in ${!components[@]}
+                do
+                  lookforcomponent=`sed -n "/^${components[${b2b_component}]}:/p" $deployment_file || true`
+                  if [[ "$lookforcomponent" = "" ]]
+                  then
+                          pwd
+                          ls -ltr
+                          shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
+                          echo "INFO: SHAID : $shaID"
+                          echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID " >> $deployment_file
+                  else
+                          pwd
+                          ls -ltr
+                          
+                          shaID=$(grep -i "${components[${b2b_component}]}: ${tags[${b2b_component}]}" shafile.txt | cut -d " " -f 3)
+                          sed -i "s/${components[${b2b_component}]}: .*/${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaID /g" $deployment_file
+                  fi
+                done
         
         
         #------------------------------------------------------------------------------Start deploying to environment------------------------------------------------------------------------------
