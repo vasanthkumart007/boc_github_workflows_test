@@ -27,7 +27,7 @@ on:
         required: true
 jobs:
   Promote-Images:
-    runs-on: [ boc ]
+    runs-on: [ myboc ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
