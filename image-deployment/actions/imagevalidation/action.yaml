@@ -26,7 +26,7 @@ runs:
               echo "REPO: $repo_present"
               if [[ "$repo_present" = "" ]]
                 then
-                  echo "ERR: Repository is not present in AWS ECR."
+                  echo "ERR: ${components[${b2b_component}]} Repository is not present in AWS ECR."
                   exit 1
               else
                 latest_tag=$(aws ecr describe-images --repository-name=${{ inputs.source_aws_repo_prefix }}/${components[${b2b_component}]} --query 'sort_by(imageDetails,& imagePushedAt)[*].imageTags[0]' --output yaml | tail -n 1 | awk -F'- ' '{print $2}')
