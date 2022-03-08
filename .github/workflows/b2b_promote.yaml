@@ -1,0 +1,162 @@
+name: B2B Promotion Job
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform (aws,azure,all)"
+        required: true
+        default: aws
+      source_env:
+        description: "Source Environment(dev,int,stage,spro)"
+        required: true
+        default: dev
+      target_env:
+        description: "Target Environment(int,stage,preprod)"
+        required: true
+        default: int
+      components:
+        description: "Components to promote (webmethods-b2b,webmethods-b2b-dcc2,e2e-monitoring,agileapps)"
+        default: webmethods-b2b
+        required: true
+      tags:
+        description: "Tags of corresponding components (applicable for dev and spro source envs)"
+        required: false
+      app_version:
+        description: "Current App Version"
+        default: "1012"
+        required: true
+jobs:
+  Promote-Images:
+    runs-on: [ boc ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: ./boc_github_workflows_test
+      
+      - name: Action Repo Checkout
+        uses: actions/checkout@v2
+        with:
+          path: boc_github_workflows_test/actions
+      
+
+
+      - name: AWS CA3S DEV ECR CONFIGURE
+        uses: aws-actions/configure-aws-credentials@v1
+        if: github.event.inputs.source_env == 'dev' || github.event.inputs.target_env == 'int'
+        with:
+          aws-access-key-id: ${{ secrets.RND_AWS_DEV_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.RND_AWS_DEV_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.RND_REGION }}
+      
+      - name: AWS CA3S DEV ECR LOGIN
+        id: aws-dev-ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
+        if: github.event.inputs.source_env == 'dev' || github.event.inputs.target_env == 'int'
+ 
+ 
+      - name: AWS CA3S INT ECR CONFIGURE
+        uses: aws-actions/configure-aws-credentials@v1
+        if: github.event.inputs.source_env == 'int' || github.event.inputs.target_env == 'int'
+        with:
+          aws-access-key-id: ${{ secrets.RND_AWS_INT_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.RND_AWS_INT_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: AWS CA3S INT ECR LOGIN
+        id: aws-int-ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
+        if:  github.event.inputs.source_env == 'int' || github.event.inputs.target_env == 'int' 
+ 
+      - name: AWS CA3S STAGE ECR CONFIGURE
+        uses: aws-actions/configure-aws-credentials@v1
+        if: github.event.inputs.source_env == 'stage' ||  github.event.inputs.target_env == 'stage' 
+        with:
+          aws-access-key-id: ${{ secrets.RND_AWS_STAGE_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.RND_AWS_STAGE_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.RND_REGION }}
+      
+      - name: AWS CA3S STAGE ECR LOGIN
+        id: aws-stage-ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
+        if: github.event.inputs.source_env == 'stage' || github.event.inputs.target_env == 'stage' 
+
+
+      - name: AWS credentials For common S3 Bucket
+        id: common-s3
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.RND_AWS_S3_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.RND_AWS_S3_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.RND_REGION }}
+
+
+      - name: Apply Env File
+        id: vars
+        run: |
+          chmod 777 variable.env
+          ./variable.env
+
+
+      - name: Verification for inputs
+        run: |
+          echo "Platform : ${{ github.event.inputs.platform }}"
+          echo "Source Env : ${{ github.event.source_env }}"
+          echo "Target Env : ${{ github.event.inputs.target_env }}"
+          echo "Components : ${{ github.event.inputs.components }}"
+          echo "Tags : ${{ github.event.inputs.tags }}"
+          echo "App Version : ${{ github.event.inputs.app_version }}"
+          echo "Source AWS Registry  : ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}"
+          echo "Source AWS Repo  : ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}"
+          echo "Target AWS Registry  : ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}"
+          echo "Target AWS Repo  : ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}"
+
+      - name: Set up Reg URLs
+        id: img-regs
+        run: |
+          if [[ "${{ github.event.inputs.source_env  }}" = "dev" || github.event.inputs.platform == "aws" ]]
+            then
+              echo "::set-output name=AWS_SOURCE_REG_URL::${{ steps.aws-dev-ecr-login.outputs.registry }}"
+              echo "::set-output name=AWS_SOURCE_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
+              echo "::set-output name=AWS_TARGET_REG_URL::${{ steps.aws-int-ecr-login.outputs.registry }}"
+              echo "::set-output name=AWS_TARGET_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
+          elif [[ "${{ github.event.inputs.source_env  }}" = "int" || github.event.inputs.platform == "aws" ]]
+            then
+              echo "::set-output name=AWS_SOURCE_REG_URL::${{ steps.aws-int-ecr-login.outputs.registry }}"
+              echo "::set-output name=AWS_SOURCE_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
+              echo "::set-output name=AWS_TARGET_REG_URL::${{ steps.aws-stage-ecr-login.outputs.registry }}"
+              echo "::set-output name=AWS_TARGET_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
+          fi
+
+      - name: Promote Images to Env
+        uses: ./boc_github_workflows_test/actions/image-deployment/actions/promote-image
+        with:
+          platform: ${{ github.event.inputs.platform }}
+          source_env: ${{ github.event.inputs.source_env }}
+          target_env: ${{ github.event.inputs.target_env }}
+          components: ${{ github.event.inputs.components }}
+          tags: ${{ github.event.inputs.tags }}
+          app_version: ${{ github.event.inputs.app_version }}
+          bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
+          metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
+          source_aws_registry: ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}
+          target_aws_registry: ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}
+          source_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}
+          target_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}
+      - name: Notification Alert
+        if: always()
+        uses: ./boc_github_workflows_test/actions/image-deployment/actions/send-notification
+        with:
+          source_env: ${{ github.event.inputs.source_env }}
+          target_env: ${{ github.event.inputs.target_env }}
+          subject: ${{ github.workflow }} for ${{ github.event.inputs.target_env }} env of ${{ github.repository }} is ${{ job.status }}
+          body: ${{ github.workflow }} for ${{ github.event.inputs.target_env }} env of ${{ github.repository }} is ${{ job.status }}
+          platform: ${{ github.event.inputs.platform }}
+          bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
+          metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
+          tags: ${{ github.event.inputs.tags }}
+          components: ${{ github.event.inputs.components }}
+          job_status: ${{ job.status}}
+          runjob: promote
+          common_webhook: ${{ steps.vars.outputs.COMMON_WEBHOOK }}
+          
