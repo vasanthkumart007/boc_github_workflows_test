@@ -251,7 +251,7 @@ runs:
                 echo " push image : $push_image " 
                 docker pull $pull_image
                 echo "------- FETCH SHAID -------"
-                shaId=$(docker inspect --format='{{.RepoDigests}}' ${source_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}_stable | sed 's:^.\(.*\).$:\1:' | tr " " "\n" | grep -i "b2b/webmethods-b2b" | cut -d "@" -f 2)
+                shaId=$(docker inspect --format='{{.RepoDigests}}' ${source_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}_stable | sed 's:^.\(.*\).$:\1:' | tr " " "\n" | grep -i "b2b/" | cut -d "@" -f 2)
                 echo "------- SHAID: $shaId -------"
                 docker tag $pull_image $push_image                 
                 docker push $push_image
