@@ -75,7 +75,7 @@ runs:
               lookforcomponent=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}/p" $promotion_file || true`
               if [[ "$lookforcomponent" = "" ]]
               then
-
+                      echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}"
                       echo "ERR: Image not promoted to ECR"
                       exit 1
                       
@@ -90,10 +90,11 @@ runs:
                         else
                           echo "INFO: SHA MATCHED FOR ${components[${b2b_component}]}: ${tags[${b2b_component}]}"
                       fi
-              
+                      echo "INFO: SHAID : $shaID"
+ 
               fi
             done
-      fi
+        fi
 
         for b2b_platform in ${!platforms[@]} 
           do
