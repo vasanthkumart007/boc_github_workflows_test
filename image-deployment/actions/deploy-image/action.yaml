@@ -146,7 +146,7 @@ runs:
           #main file 
           aws s3 cp $deployment_file s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt 
           #history file
-          aws s3 cp $deployment_file s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/${datelabel}-${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt 
+          aws s3 cp $deployment_file s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-${datelabel}--deploy-builds.txt 
     shell: bash
   - name: Delete old Builds
     run: |
