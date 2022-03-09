@@ -160,7 +160,7 @@ runs:
         for b2b_platform in ${!platforms[@]}
         do
           echo "Build History of ${platforms[$b2b_platform]}-${{ inputs.target_env }}"
-          aws s3 ls s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/ | awk '{print $4}' | grep ".*-${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt"
+          aws s3 ls s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/ | awk '{print $4}' | grep "${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}.*-deploy-builds.txt"
           fcount=$(aws s3 ls s3://${{inputs.bucket_name}}/${{inputs.metadata_path}}/ | awk '{print $4}' | grep ".*-${platforms[$b2b_platform]}-${{ inputs.target_env }}-${{ inputs.app_version }}-deploy-builds.txt" | wc -l)
           echo "$fcount"
           if [[ $fcount -le 3 ]]
