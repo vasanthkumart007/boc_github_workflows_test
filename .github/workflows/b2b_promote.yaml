@@ -129,7 +129,7 @@ jobs:
       - name: Image Verification Process
         uses: ./boc_github_workflows_test/actions/image-deployment/actions/imagevalidation
         with: 
-          component: ${{ github.event.inputs.component }}
+          component: ${{ github.event.inputs.components }}
           source_aws_registry: ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}
           source_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}      
 
