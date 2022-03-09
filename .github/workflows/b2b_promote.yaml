@@ -1,161 +1,300 @@
-name: B2B Promotion Job
-on:
-  workflow_dispatch:
-    inputs:
-      platform:
-        description: "Platform (aws,azure,all)"
-        required: true
-        default: aws
-      source_env:
-        description: "Source Environment(dev,int,stage,spro)"
-        required: true
-        default: dev
-      target_env:
-        description: "Target Environment(int,stage,preprod)"
-        required: true
-        default: int
-      components:
-        description: "Components to promote (webmethods-b2b,webmethods-b2b-dcc2,e2e-monitoring,agileapps)"
-        default: webmethods-b2b,webmethods-b2b-dcc2,bocctp,agileapps
-        required: true
-      tags:
-        description: "Tags of corresponding components (applicable for dev and spro source envs)"
-        required: false
-      app_version:
-        description: "Current App Version"
-        default: "1012"
-        required: true
-jobs:
-  Promote-Images:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      
-      
-      - name: Action Repo Checkout
-        uses: actions/checkout@v2
-        with:
-          path: boc_github_workflows_test/actions
-      
-
-
-
-      - name: AWS CA3S DEV ECR CONFIGURE
-        uses: aws-actions/configure-aws-credentials@v1
-        if: github.event.inputs.source_env == 'dev' || github.event.inputs.target_env == 'int'
-        with:
-          aws-access-key-id: ${{ secrets.RND_AWS_DEV_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.RND_AWS_DEV_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.RND_REGION }}
-      
-      - name: AWS CA3S DEV ECR LOGIN
-        id: aws-dev-ecr-login
-        uses: aws-actions/amazon-ecr-login@v1
-        if: github.event.inputs.source_env == 'dev' || github.event.inputs.target_env == 'int'
- 
- 
-      - name: AWS CA3S INT ECR CONFIGURE
-        uses: aws-actions/configure-aws-credentials@v1
-        if: github.event.inputs.source_env == 'int' || github.event.inputs.target_env == 'int'
-        with:
-          aws-access-key-id: ${{ secrets.RND_AWS_INT_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.RND_AWS_INT_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: AWS CA3S INT ECR LOGIN
-        id: aws-int-ecr-login
-        uses: aws-actions/amazon-ecr-login@v1
-        if:  github.event.inputs.source_env == 'int' || github.event.inputs.target_env == 'int' 
- 
-      - name: AWS CA3S STAGE ECR CONFIGURE
-        uses: aws-actions/configure-aws-credentials@v1
-        if: github.event.inputs.source_env == 'stage' ||  github.event.inputs.target_env == 'stage' 
-        with:
-          aws-access-key-id: ${{ secrets.RND_AWS_STAGE_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.RND_AWS_STAGE_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.RND_REGION }}
-      
-      - name: AWS CA3S STAGE ECR LOGIN
-        id: aws-stage-ecr-login
-        uses: aws-actions/amazon-ecr-login@v1
-        if: github.event.inputs.source_env == 'stage' || github.event.inputs.target_env == 'stage' 
-
-
-      - name: AWS credentials For common S3 Bucket
-        id: common-s3
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.RND_AWS_S3_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.RND_AWS_S3_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.RND_REGION }}
-
-
-
-
-
-      - name: Apply Env File
-        id: vars
-        run: |
-          pwd
-          ls -ltr
-          chmod 777 variable.env
-          ./variable.env
-      - name: Set up Reg URLs
-        id: img-regs
-        run: |
-          if [[ "${{ github.event.inputs.source_env  }}" = "dev" || github.event.inputs.platform == "aws" ]]
+name: "Promote Images"
+description: "Promote Images to the target environment"
+inputs:
+  platform:
+    description: "Platform"
+    required: true
+  source_env:
+    description: "Source Environment"
+    required: true
+  target_env:
+    description: "Target Environment"
+    required: true
+  components:
+    description: "Components"
+    required: true
+  tags:
+    description: "Components Tags"
+    required: true
+  app_version:
+    description: current promotion process version
+    required: true
+  bucket_name:
+    description: Metadata Bucket name
+    required: true
+  metadata_path:
+    description: Metadata Path
+    required: true
+  source_aws_registry:
+    description: Source AWS registry
+    required: true
+  target_aws_registry:
+    description: Source AWS registry
+    required: true
+  source_aws_repo_prefix:
+    description: Repo prefix for source AWS Repo
+    required: true
+  target_aws_repo_prefix:
+    description: Repo prefix for target AWS Repo
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: promote-images
+      shell: bash
+      run: |
+        for b2b_platform in ${!platforms[@]}
+        do
+          targetbuildfile=${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt
+          sourcebuildfile="${platforms[${b2b_platform}]}-${{ inputs.source_env }}-${{ inputs.app_version }}-deploy-builds.txt"
+          rm -f $targetbuildfile
+          rm -f $sourcebuildfile 
+          sleep 5
+        done
+        echo " "
+        echo " "
+        echo "INFO: --------------------------------------INSIDE PROMOTE ACTION----------------------------------"
+        echo " "
+        echo " "
+        if [[ "${{ inputs.platform }}" = "all" ]]
+        then
+          platforms=(aws azure)
+        else
+          platforms=(${{ inputs.platform }})
+        fi
+        echo "platform: ${platforms}"
+        components=($(echo ${{ inputs.components }} | sed -e 's\,\ \g'))
+        if [[ "${{ inputs.source_env }}" = "dev" || "${{ inputs.source_env }}" = "spro" ]]
+        then
+          tags=($(echo ${{ inputs.tags }} | sed -e 's\,\ \g'))
+        else
+          tags=()
+        fi
+        
+        if [[ "${{ inputs.source_env }}" = "dev" || "${{ inputs.source_env }}" = "spro" ]]
+        then
+          echo "Promoting with input tags"
+          for b2b_platform in ${!platforms[@]}
+          do
+            promotion_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt"
+            sourcebuildfile="${platforms[${b2b_platform}]}-${{ inputs.source_env }}-${{ inputs.app_version }}-deploy-builds.txt"
+            targetenv_filepresent=$(aws s3 ls s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$promotion_file || true)
+            sourceenv_filepresent=$(aws s3 ls s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$sourcebuildfile || true)
+            if [[ "sourceenv_filepresent" == "" ]]
             then
-              echo "::set-output name=AWS_SOURCE_REG_URL::${{ steps.aws-dev-ecr-login.outputs.registry }}"
-              echo "::set-output name=AWS_SOURCE_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
-              echo "::set-output name=AWS_TARGET_REG_URL::${{ steps.aws-int-ecr-login.outputs.registry }}"
-              echo "::set-output name=AWS_TARGET_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
-          elif [[ "${{ github.event.inputs.source_env  }}" = "int" || github.event.inputs.platform == "aws" ]]
+              echo "ERR: No deployments done in source env Cannot promote stable builds"
+              exit 1
+            fi
+            aws s3 cp s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$sourcebuildfile $sourcebuildfile
+
+            if [[ "$targetenv_filepresent" == "" ]]
             then
-              echo "::set-output name=AWS_SOURCE_REG_URL::${{ steps.aws-int-ecr-login.outputs.registry }}"
-              echo "::set-output name=AWS_SOURCE_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
-              echo "::set-output name=AWS_TARGET_REG_URL::${{ steps.aws-stage-ecr-login.outputs.registry }}"
-              echo "::set-output name=AWS_TARGET_REPO_PREFIX::${{ steps.vars.outputs.AWS_REPO_PREFIX }}"
-          fi
-      - name: Verification for inputs
-        run: |
-          echo "Platform : ${{ github.event.inputs.platform }}"
-          echo "Source Env : ${{ github.event.source_env }}"
-          echo "Target Env : ${{ github.event.inputs.target_env }}"
-          echo "Components : ${{ github.event.inputs.components }}"
-          echo "Tags : ${{ github.event.inputs.tags }}"
-          echo "App Version : ${{ github.event.inputs.app_version }}"
-          echo "Source AWS Registry  : ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}"
-          echo "Source AWS Repo  : ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}"
-          echo "Target AWS Registry  : ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}"
-          echo "Target AWS Repo  : ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}"
-      - name: Promote Images to Env
-        uses: ./boc_github_workflows_test/actions/image-deployment/actions/promote-image
-        with:
-          platform: ${{ github.event.inputs.platform }}
-          source_env: ${{ github.event.inputs.source_env }}
-          target_env: ${{ github.event.inputs.target_env }}
-          components: ${{ github.event.inputs.components }}
-          tags: ${{ github.event.inputs.tags }}
-          app_version: ${{ github.event.inputs.app_version }}
-          bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
-          metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
-          source_aws_registry: ${{ steps.img-regs.outputs.AWS_SOURCE_REG_URL }}
-          target_aws_registry: ${{ steps.img-regs.outputs.AWS_TARGET_REG_URL }}
-          source_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_SOURCE_REPO_PREFIX }}
-          target_aws_repo_prefix: ${{ steps.img-regs.outputs.AWS_TARGET_REPO_PREFIX }}
-      - name: Notification Alert
-        if: always()
-        uses: ./boc_github_workflows_test/actions/image-deployment/actions/send-notification
-        with:
-          source_env: ${{ github.event.inputs.source_env }}
-          target_env: ${{ github.event.inputs.target_env }}
-          subject: ${{ github.workflow }} for ${{ github.event.inputs.target_env }} env of ${{ github.repository }} is ${{ job.status }}
-          body: ${{ github.workflow }} for ${{ github.event.inputs.target_env }} env of ${{ github.repository }} is ${{ job.status }}
-          platform: ${{ github.event.inputs.platform }}
-          bucket_name: ${{ secrets.STABLE_BUILDS_BUCKET_NAME }}
-          metadata_path: ${{ secrets.STABLE_BUILDS_METADATA_PATH }}
-          tags: ${{ github.event.inputs.tags }}
-          components: ${{ github.event.inputs.components }}
-          job_status: ${{ job.status}}
-          runjob: promote
-          common_webhook: ${{ steps.vars.outputs.COMMON_WEBHOOK }}
+              echo "INFO: Target environment build file not present"
+              touch "./${promotion_file}"
+            else
+              echo "INFO: Target environment build file present"
+              aws s3 cp s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$promotion_file $promotion_file
+            fi
+            for b2b_component in ${!components[@]}
+            do
+              tag_present=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/p" $sourcebuildfile || true`
+              if [[ "$tag_present" = "" ]]
+              then
+                echo "ERR: ${components[$b2b_component]}: ${tags[${b2b_component}]} Image not deployed in previous env"
+                exit 1
+              fi
+            done
+            # for b2b_component in ${!components[@]}
+            # do
+            #     shaID=$(aws ecr describe-images --repository-name=${{ inputs.source_aws_repo_prefix }}/${components[${b2b_component}]} --image-ids imageTag=${tags[${b2b_component}]}  | jq '.imageDetails[0].imageDigest' -r)
+            #     echo " $shaID "
+            #     tag_present=`sed -n "/^${components[${b2b_component}]}:.*/p" $promotion_file || true`
+            #     if [[ "$tag_present" = "" ]]
+            #     then
+            #       echo "tag for ${components[${b2b_component}]} not present in target file. Add it"
+            #       echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}" >> $promotion_file
+            #     else
+            #       echo "tag for ${components[${b2b_component}]} present in target file. Changing it"
+            #       sed -i "s/${components[${b2b_component}]}:.*/${components[${b2b_component}]}: ${tags[${b2b_component}]}/g" $promotion_file
+            #     fi
+            # done
+            echo "CHECK 1 DONE"
+            #----------------------------------------------TAG IMAGES STABLE----------------------------------------------
+            # for b2b_platform in ${!platforms[@]}
+            #   do   
+            #   if [[ ${platforms[${b2b_platform}]} == "aws" ]]
+            #     then
+            #       source_image_registry_prefix="${{ inputs.source_aws_registry }}/${{ inputs.source_aws_repo_prefix }}"
+            #       target_image_registry_prefix="${{ inputs.source_aws_registry }}/${{ inputs.target_aws_repo_prefix }}"
+            #   else
+            #       echo "Please mention AWS platform"
+            #   fi
+            #   for b2b_component in ${!components[@]}
+            #     do
+            #       echo " "
+            #       echo "-----------TAG IMAGES STABLE-----------"
+            #       pull_image="${source_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}"
+            #       push_image="${target_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}_stable"
+            #       docker pull $pull_image
+            #       docker tag $pull_image $push_image                 
+            #       docker push $push_image
+            #       docker rmi $pull_image
+            #       docker rmi $push_image
+            #       echo "-----------------DOCKER DONE-------------"
+            #       echo " "
+            #   done
+            # done
+            # #----------------------------------------------TAG IMAGES STABLE----------------------------------------------
+            
+            
+          done
+        else
+          echo "Int,Stage is source env promoting stable builds to next env"
+          for b2b_platform in ${!platforms[@]}
+          do
+            sourcebuildfile="${platforms[${b2b_platform}]}-${{ inputs.source_env }}-${{ inputs.app_version }}-deploy-builds.txt"
+            sourceenv_filepresent=$(aws s3 ls s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$sourcebuildfile || true)
+            if [[ "sourceenv_filepresent" == "" ]]
+            then
+              echo "ERR: No deployments done in source env Cannot promote stable builds"
+              exit 1
+            fi
+            aws s3 cp s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$sourcebuildfile $sourcebuildfile 
+            promotion_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt"
+            targetenv_filepresent=$(aws s3 ls s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$promotion_file || true)
+            if [[ "$targetenv_filepresent" = "" ]]
+            then
+              echo "INFO: Target env build file not present"
+              touch "./${promotion_file}"
+            else
+              echo "INFO: Target env build file present"
+              aws s3 cp s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$promotion_file $promotion_file
+            fi
+            for b2b_component in ${!components[@]}
+            do
+              tag_present=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/p" $sourcebuildfile || true`
+              if [[ "$tag_present" = "" ]]
+              then
+                echo "ERR: ${components[$b2b_component]}: ${tags[${b2b_component}]}. Image not deployed in previous env"
+                exit 1
+              fi
+              component_name=$(sed -n "/^${components[${b2b_component}]}:.*/p" $sourcebuildfile | awk -F ':' '{print $1}' | tr -d [:space:])
+              component_tag=$(sed -n "/^${components[${b2b_component}]}:.*/p" $sourcebuildfile | awk '{print $2}' | tr -d [:space:])
+              tags[$b2b_component]=$component_tag
+              # target_tag_present=`sed -n "/^${components[${b2b_component}]}: .*/p" $promotion_file || true`
+              # if [[ "$target_tag_present" = "" ]]
+              # then
+              #   echo "Tag for ${components[${b2b_component}]} not present in target file. Add it"
+              #   echo "${components[${b2b_component}]}: $component_tag" >> $promotion_file
+              # else
+              #   echo "Tag for ${components[${b2b_component}]} present in target file. Changing it"
+              #   sed -i "s/${components[${b2b_component}]}:.*/${components[${b2b_component}]}: $component_tag/g" $promotion_file
+              # fi
+            done
+          done
+        fi
+        # if [[ ("${{ inputs.target_env }}" = "int") || ("${{ inputs.source_env }}" = "dev") || ("${{ inputs.source_env }}" = "int") ]]
+        # then
+            #----------------------------------------------TAG IMAGES STABLE----------------------------------------------
+            for b2b_platform in ${!platforms[@]}
+              do
+              
+              if [[ ${platforms[${b2b_platform}]} == "aws" ]]
+                then
+                  source_image_registry_prefix="${{ inputs.source_aws_registry }}/${{ inputs.source_aws_repo_prefix }}"
+                  echo $source_image_registry_prefix
+                  target_image_registry_prefix="${{ inputs.source_aws_registry }}/${{ inputs.source_aws_repo_prefix }}"
+                  echo $target_image_registry_prefix
+              else
+                  echo "Please mention AWS platform"
+              fi
+              for b2b_component in ${!components[@]}
+                do
+                  echo " "
+                  echo "-----------TAG IMAGES STABLE-----------"
+                  pull_image="${source_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}"
+                  push_image="${target_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}_stable"
+                  echo $pull_image
+                  echo $push_image
+                  docker pull $pull_image
+                  docker tag $pull_image $push_image                 
+                  docker push $push_image
+                  docker rmi $pull_image
+                  docker rmi $push_image
+                  echo "-----------------DOCKER DONE-------------"
+                  echo " "
+              done
+            done
+            #----------------------------------------------TAG IMAGES STABLE----------------------------------------------
+            
+            
+            #----------------------------------------------PUSH IMAGES----------------------------------------------------
+            for b2b_platform in ${!platforms[@]}
+              do
+              
+              if [[ ${platforms[${b2b_platform}]} == "aws" ]]
+                then
+                  source_image_registry_prefix="${{ inputs.source_aws_registry }}/${{ inputs.source_aws_repo_prefix }}"
+                  target_image_registry_prefix="${{ inputs.target_aws_registry }}/${{ inputs.target_aws_repo_prefix }}"
+                else
+                  echo "Please mention AWS platform"
+              fi
+          
+              for b2b_component in ${!components[@]}
+              do
+                promotion_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt"
+                echo " "
+                echo "-------------------PUSH IMAGES-------------------"
+                pull_image="${source_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}_stable"
+                push_image="${target_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}"
+                echo " pull image : $pull_image "
+                echo " push image : $push_image " 
+                docker pull $pull_image
+                echo "------- FETCH SHAID -------"
+                echo " "
+                shaId=$(docker inspect --format='{{.RepoDigests}}' ${source_image_registry_prefix}/${components[${b2b_component}]}:${tags[${b2b_component}]}_stable | sed 's:^.\(.*\).$:\1:' | tr " " "\n" | grep -i "b2b/" | cut -d "@" -f 2)
+                echo "------- SHAID: $shaId -------"
+                docker tag $pull_image $push_image                 
+                docker push $push_image
+                docker rmi $pull_image
+                docker rmi $push_image
+                echo "-----------------DOCKER DONE-------------"
+                echo " "
+                tag_present=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/p" $promotion_file || true`
+                 if [[ "$tag_present" = "" ]]
+                 then
+                   echo "INFO: Tag for ${components[${b2b_component}]} not present in target file. Add it"
+                   echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaId" >> $promotion_file
+                 else
+                   echo "INFO: Tag for ${components[${b2b_component}]} present in target file. Changing it"
+                   sed -i "s/${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaId/g" $promotion_file
+                 fi
+              done
+          done
+          #----------------------------------------------PUSH IMAGES----------------------------------------------------
+          
+          
+        #fi
+        # echo " SHAID: $shaId "
+        # promotion_file="${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt"
+
+        #  for b2b_component in ${!components[@]}
+        #      do
+        #          echo " $shaId "
+        #          tag_present=`sed -n "/^${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/p" $promotion_file || true`
+        #          if [[ "$tag_present" = "" ]]
+        #          then
+        #            echo "INFO: Tag for ${components[${b2b_component}]} not present in target file. Add it"
+        #            echo "${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaId" >> $promotion_file
+        #          else
+        #            echo "INFO: Tag for ${components[${b2b_component}]} present in target file. Changing it"
+        #            sed -i "s/${components[${b2b_component}]}: ${tags[${b2b_component}]}.*/${components[${b2b_component}]}: ${tags[${b2b_component}]}: $shaId/g" $promotion_file
+        #          fi
+        #      done
+
+        for b2b_platform in ${!platforms[@]}
+        do
+          targetbuildfile=${platforms[${b2b_platform}]}-${{ inputs.target_env }}-${{ inputs.app_version }}-promoted-builds.txt
+          sourcebuildfile="${platforms[${b2b_platform}]}-${{ inputs.source_env }}-${{ inputs.app_version }}-deploy-builds.txt"
+          aws s3 cp $targetbuildfile s3://${{ inputs.bucket_name }}/${{ inputs.metadata_path }}/$targetbuildfile
+        done
